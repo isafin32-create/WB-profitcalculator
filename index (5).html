@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wildberries · книга прибыли</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F2F3F5; --surface-solid:#FFFFFF; --surface2:#E8EAEE;
+    --ink:#2B2B33; --ink-dim:#6B6E78; --rule:#DBDEE3;
+    --violet:#6E4FD1; --violet-dim:#D6CBF5;
+    --gold:#9A6B12; --gold-bg:rgba(184,134,11,0.12);
+    --coral:#B3392F; --coral-bg:rgba(179,57,47,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;
+  }
+  .num{ font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  .display{ font-family:ui-serif,Georgia,"Times New Roman",serif; }
+  ::selection{ background:var(--violet-dim); }
+
+  .wrap{ max-width:1100px; margin:0 auto; padding:40px 24px; }
+  .header{ display:flex; align-items:flex-start; justify-content:space-between; gap:24px;
+    border-bottom:1px solid var(--rule); margin-bottom:40px; padding-bottom:24px; }
+  .eyebrow{ font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--violet); margin-bottom:8px; }
+  h1{ font-size:34px; margin:0; font-weight:500; }
+  .lede{ font-size:14px; color:var(--ink-dim); max-width:480px; margin:10px 0 0; }
+
+  .stamp{ flex-shrink:0; width:108px; height:108px; border-radius:999px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; transform:rotate(-6deg); border:2px solid var(--gold); }
+  .stamp .label{ font-size:9px; letter-spacing:.12em; text-transform:uppercase; opacity:.85; }
+  .stamp .value{ font-size:14px; font-weight:600; padding:0 8px; line-height:1.2; }
+
+  section.step{ margin-bottom:48px; }
+  .step-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:4px; }
+  .step-index{ font-size:12px; color:var(--violet); }
+  .step-title{ font-size:20px; font-weight:500; margin:0; }
+  .step-sub{ font-size:14px; color:var(--ink-dim); margin:0 0 16px; }
+
+  .row{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:16px; }
+  .btn{ display:inline-flex; align-items:center; gap:7px; font-size:14px; border-radius:8px; padding:9px 14px;
+    border:none; cursor:pointer; font-family:inherit; }
+  .btn-primary{ background:var(--violet); color:#FFFFFF; font-weight:500; }
+  .btn-ghost{ background:transparent; color:var(--ink); border:1px solid var(--rule); }
+  .btn-gold{ background:var(--gold); color:#FFFFFF; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .link-btn{ background:none; border:none; cursor:pointer; font-size:13px; font-weight:500; color:var(--violet); font-family:inherit; padding:0; }
+  .icon-btn{ background:none; border:none; cursor:pointer; color:var(--ink-dim); padding:0; display:inline-flex; }
+
+  .warn{ font-size:14px; color:var(--coral); display:inline-flex; align-items:center; gap:6px; }
+  .dim{ color:var(--ink-dim); font-size:14px; display:inline-flex; align-items:center; gap:6px; }
+
+  .empty{ font-size:14px; color:var(--ink-dim); border:1px dashed var(--rule); border-radius:10px; padding:22px; text-align:center; }
+
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  thead tr{ background:var(--surface2); }
+  th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-dim); padding:10px 12px; font-weight:500; }
+  th.right, td.right{ text-align:right; }
+  td{ padding:8px 12px; }
+  tbody tr, tfoot tr{ border-top:1px solid var(--rule); }
+  .table-card{ border:1px solid var(--rule); border-radius:10px; overflow:hidden; overflow-x:auto; }
+  .table-card.coral-border{ border-color:var(--coral); }
+
+  input[type=text], input.field, select{
+    background:var(--surface2); color:var(--ink); border:1px solid var(--rule);
+    border-radius:8px; padding:8px 10px; font-size:14px; font-family:inherit; outline:none;
+  }
+  .cell-input{ width:100%; background:transparent; border:none; outline:none; color:var(--ink); font-size:14px; font-family:inherit; }
+  .cell-input.num{ text-align:right; }
+  select.field{ min-width:0; }
+
+  .mapping-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; padding:16px; background:var(--surface-solid);
+    border:1px solid var(--rule); border-radius:10px; }
+  @media(min-width:820px){ .mapping-grid{ grid-template-columns:repeat(6,1fr); } }
+  .field-label{ display:block; font-size:12px; color:var(--ink-dim); margin-bottom:4px; }
+  .req{ color:var(--coral); }
+
+  .search-box{ display:flex; align-items:center; gap:8px; border:1px solid var(--rule); border-radius:8px; padding:7px 10px; }
+  .search-box input{ background:transparent; border:none; outline:none; color:var(--ink); font-size:14px; width:220px; }
+
+  .banner{ display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--surface-solid);
+    border:1px solid var(--violet); border-radius:8px; padding:10px 14px; font-size:14px; margin-bottom:16px; }
+
+  .gold-row{ background:var(--gold-bg); }
+  .coral-row{ background:var(--coral-bg); }
+  .text-gold{ color:var(--gold); }
+  .text-coral{ color:var(--coral); }
+
+  svg.ic{ display:inline-block; vertical-align:-2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <div class="eyebrow">Wildberries · книга прибыли</div>
+      <h1 class="display">Прибыль поартикульно</h1>
+      <p class="lede">Загрузи закупочные цены один раз — дальше просто закидывай отчёты о продажах, и таблица сама вычтет логистику, комиссию и закупку.</p>
+    </div>
+    <div id="stamp"></div>
+  </div>
+
+  <div class="row" style="margin-top:-24px;margin-bottom:32px">
+    <span class="dim">Перенос данных между браузерами:</span>
+    <button class="btn btn-ghost" id="btnExportBackup">Скачать резервную копию</button>
+    <button class="btn btn-ghost" id="btnImportBackup">Загрузить резервную копию</button>
+    <input type="file" id="backupFileInput" accept=".json" style="display:none">
+  </div>
+
+  <!-- Step 01 — purchase prices -->
+  <section class="step">
+    <div class="step-head"><span class="step-index num">01</span><h2 class="step-title display">Закупочные цены</h2></div>
+    <p class="step-sub">База по артикулам. Хранится в этом браузере — при следующем визите ничего вводить заново не придётся.</p>
+    <div id="priceControls"></div>
+    <input type="file" id="priceFileInput" accept=".xlsx,.xls" style="display:none">
+    <span class="warn" id="priceUploadError" style="display:none"></span>
+    <div id="purchaseTableWrap"></div>
+  </section>
+
+  <!-- Step 02 — sales report -->
+  <section class="step">
+    <div class="step-head"><span class="step-index num">02</span><h2 class="step-title display">Отчёт о продажах WB</h2></div>
+    <p class="step-sub">Только .xlsx / .xls — так же, как выгружает личный кабинет Wildberries.</p>
+    <div class="row">
+      <button class="btn btn-primary" id="btnLoadReport">Загрузить отчёт</button>
+      <input type="file" id="reportFileInput" accept=".xlsx,.xls" style="display:none">
+      <span class="dim" id="reportFileInfo" style="display:none"></span>
+      <span class="warn" id="reportUploadError" style="display:none"></span>
+    </div>
+    <div id="mappingWrap"></div>
+  </section>
+
+  <!-- Step 03 — results -->
+  <section class="step">
+    <div class="step-head"><span class="step-index num">03</span><h2 class="step-title display">Результат</h2></div>
+    <p class="step-sub" id="resultsSub">Убыточные позиции — сверху. Красным то, что не проходит; жёлтым — что зарабатывает.</p>
+    <div id="viewingBanner"></div>
+    <div id="resultsWrap"></div>
+  </section>
+
+  <!-- Step 04 — history -->
+  <section class="step">
+    <div class="step-head"><span class="step-index num">04</span><h2 class="step-title display">История и хронические минусы</h2></div>
+    <p class="step-sub">Сохраняй каждый обработанный отчёт как отдельный период — так станет видно, кто в минусе не первый раз подряд.</p>
+    <div id="saveRow" class="row" style="display:none">
+      <input type="text" class="field" id="saveLabelInput" placeholder="напр. Неделя 32">
+      <button class="btn btn-primary" id="btnSavePeriod">Сохранить как период</button>
+    </div>
+    <div id="periodsWrap"></div>
+    <div id="chronicWrap"></div>
+  </section>
+
+</div>
+
+<script>
+// ---------- icons (tiny inline SVGs, no dependency) ----------
+function icon(name){
+  const s = {
+    upload: '<svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+    plus: '<svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    trash: '<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    warn: '<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    file: '<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    download: '<svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+    search: '<svg class="ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    sort: '<svg class="ic" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>',
+  };
+  return s[name] || '';
+}
+
+// ---------- state ----------
+const state = {
+  purchaseDB: [],
+  reportRows: [], reportHeaders: [], reportFileName: '',
+  mapping: { article:'', quantity:'', salePrice:'', toTransfer:'', logistics:'', other:'' },
+  commissionRate: '6',
+  periods: [], viewingPeriodId: null, saveLabel: '',
+  search: '', sortDir: 'asc',
+  priceSearch: '', priceCollapsed: false,
+};
+const priceArticleBeforeEdit = new Map();
+
+// ---------- helpers ----------
+function fmt(n){
+  const v = Number.isFinite(n) ? n : 0;
+  return v.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtSigned(n){
+  const v = Number.isFinite(n) ? n : 0;
+  const sign = v > 0 ? '+' : v < 0 ? '\u2212' : '';
+  return sign + fmt(Math.abs(v));
+}
+function normalizeArticle(v){ return String(v ?? '').trim().toLowerCase(); }
+function toNum(v){
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined) return 0;
+  let s = String(v).trim();
+  if (!s) return 0;
+  s = s.replace(/\u00A0/g, '').replace(/\s/g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+function guessColumn(headers, keywords){
+  const lower = headers.map(h => String(h).toLowerCase());
+  for (const kw of keywords){
+    const idx = lower.findIndex(h => h.includes(kw));
+    if (idx !== -1) return headers[idx];
+  }
+  return '';
+}
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function readWorkbookRows(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ---------- storage (localStorage, no backend needed) ----------
+function loadStorage(){
+  try {
+    const p = localStorage.getItem('wb-purchase-db');
+    if (p) state.purchaseDB = JSON.parse(p) || [];
+  } catch (e) {}
+  try {
+    const h = localStorage.getItem('wb-periods');
+    if (h) state.periods = JSON.parse(h) || [];
+  } catch (e) {}
+}
+function savePurchaseDB(){
+  try { localStorage.setItem('wb-purchase-db', JSON.stringify(state.purchaseDB)); } catch (e) {}
+}
+function savePeriods(){
+  try { localStorage.setItem('wb-periods', JSON.stringify(state.periods)); } catch (e) {}
+}
+
+// ---------- derived data ----------
+function purchaseIndex(){
+  const map = new Map();
+  for (const row of state.purchaseDB) if (row.article) map.set(normalizeArticle(row.article), row);
+  return map;
+}
+function mappingReady(){
+  return !!(state.mapping.article && state.mapping.toTransfer && state.mapping.salePrice);
+}
+function commissionRateNum(){
+  return Number(String(state.commissionRate).replace(',', '.')) || 0;
+}
+function computeRows(){
+  if (!mappingReady()) return [];
+  const idx = purchaseIndex();
+  const rate = commissionRateNum();
+  const m = state.mapping;
+  const groups = new Map();
+  state.reportRows.forEach((row) => {
+    const articleRaw = String(row[m.article] ?? '').trim();
+    if (!articleRaw) return;
+    const key = normalizeArticle(articleRaw);
+    const qty = m.quantity ? (toNum(row[m.quantity]) || 1) : 1;
+    const salePrice = toNum(row[m.salePrice]);
+    const toTransfer = toNum(row[m.toTransfer]);
+    const logistics = m.logistics ? toNum(row[m.logistics]) : 0;
+    const other = m.other ? toNum(row[m.other]) : 0;
+    const commission = salePrice * (rate / 100);
+    if (!groups.has(key)) groups.set(key, { article: articleRaw, qty: 0, salePrice: 0, toTransfer: 0, commission: 0, logistics: 0, other: 0 });
+    const g = groups.get(key);
+    g.qty += qty; g.salePrice += salePrice; g.toTransfer += toTransfer;
+    g.commission += commission; g.logistics += logistics; g.other += other;
+  });
+  const result = [];
+  let i = 0;
+  for (const g of groups.values()){
+    // skip purely technical rows (no retail price and nothing paid out) — not a real sale
+    if (g.toTransfer === 0 && g.salePrice === 0) continue;
+    const entry = idx.get(normalizeArticle(g.article));
+    const purchasePrice = entry ? toNum(entry.purchasePrice) : 0;
+    const costTotal = purchasePrice * g.qty;
+    const profit = g.toTransfer - g.commission - g.logistics - g.other - costTotal;
+    const margin = g.toTransfer !== 0 ? (profit / g.toTransfer) * 100 : 0;
+    result.push({
+      key: i++, article: g.article, name: entry?.name || '', qty: g.qty, salePrice: g.salePrice,
+      commission: g.commission, toTransfer: g.toTransfer, logistics: g.logistics, other: g.other,
+      purchasePrice, costTotal, profit, margin, matched: !!entry,
+    });
+  }
+  return result;
+}
+function computeTotals(rows){
+  return rows.reduce((acc, r) => {
+    acc.toTransfer += r.toTransfer; acc.commission += r.commission; acc.logistics += r.logistics;
+    acc.cost += r.costTotal; acc.profit += r.profit;
+    acc.lossCount += r.profit < 0 ? 1 : 0; acc.unmatched += r.matched ? 0 : 1;
+    return acc;
+  }, { toTransfer:0, commission:0, logistics:0, cost:0, profit:0, lossCount:0, unmatched:0 });
+}
+function activePeriod(){
+  return state.viewingPeriodId ? (state.periods.find(p => p.id === state.viewingPeriodId) || null) : null;
+}
+function chronicLosses(){
+  const sorted = [...state.periods].sort((a,b) => new Date(a.savedAt) - new Date(b.savedAt));
+  const byArticle = new Map();
+  for (const period of sorted){
+    for (const row of period.rows){
+      const key = normalizeArticle(row.article);
+      if (!key) continue;
+      if (!byArticle.has(key)) byArticle.set(key, { article: row.article, name: row.name, history: [] });
+      const entry = byArticle.get(key);
+      if (row.name) entry.name = row.name;
+      entry.history.push({ profit: row.profit, label: period.label, savedAt: period.savedAt });
+    }
+  }
+  const result = [];
+  for (const entry of byArticle.values()){
+    let streak = 0;
+    for (let i = entry.history.length - 1; i >= 0; i--){
+      if (entry.history[i].profit < 0) streak++; else break;
+    }
+    if (streak < 2) continue;
+    const lossCount = entry.history.filter(h => h.profit < 0).length;
+    const last = entry.history[entry.history.length - 1];
+    result.push({ article: entry.article, name: entry.name, streak, lossCount, periodsCount: entry.history.length, lastProfit: last.profit });
+  }
+  return result.sort((a,b) => b.streak - a.streak);
+}
+
+// ---------- actions ----------
+function addPriceRow(){
+  state.purchaseDB.push({ id: Date.now() + Math.random(), article: '', name: '', purchasePrice: '' });
+  savePurchaseDB(); renderPurchase();
+}
+function updatePriceRow(id, field, value){
+  const row = state.purchaseDB.find(r => r.id === id);
+  if (row) { row[field] = value; savePurchaseDB(); }
+}
+function removePriceRow(id){
+  state.purchaseDB = state.purchaseDB.filter(r => r.id !== id);
+  savePurchaseDB(); renderPurchase();
+}
+async function handlePriceFile(file){
+  const errEl = document.getElementById('priceUploadError');
+  errEl.style.display = 'none';
+  try {
+    const rows = await readWorkbookRows(file);
+    if (!rows.length) throw new Error('empty');
+    const headers = Object.keys(rows[0]);
+    const artCol = guessColumn(headers, ['артикул', 'sku', 'код товара', 'article']);
+    const nameCol = guessColumn(headers, ['назв', 'наимен', 'товар', 'name']);
+    const priceCol = guessColumn(headers, ['закуп', 'себестои', 'закупочн', 'cost', 'price']);
+    if (!artCol || !priceCol){
+      errEl.textContent = 'Не нашёл колонки «Артикул» и «Закупочная цена» — добавь и заполни строки вручную ниже.';
+      errEl.style.display = 'inline-flex'; errEl.innerHTML = icon('warn') + ' ' + errEl.textContent;
+      return;
+    }
+    const imported = rows.filter(r => String(r[artCol]).trim() !== '').map(r => ({
+      id: Date.now() + Math.random(),
+      article: String(r[artCol]).trim(),
+      name: nameCol ? String(r[nameCol]).trim() : '',
+      purchasePrice: toNum(r[priceCol]),
+    }));
+    const byArt = new Map(state.purchaseDB.map(p => [normalizeArticle(p.article), p]));
+    for (const row of imported) byArt.set(normalizeArticle(row.article), row);
+    state.purchaseDB = Array.from(byArt.values());
+    savePurchaseDB(); renderPurchase();
+  } catch (err) {
+    errEl.innerHTML = icon('warn') + ' Не получилось прочитать файл. Проверь, что это .xlsx или .xls.';
+    errEl.style.display = 'inline-flex';
+  }
+}
+async function handleReportFile(file){
+  const errEl = document.getElementById('reportUploadError');
+  errEl.style.display = 'none';
+  try {
+    const rows = await readWorkbookRows(file);
+    if (!rows.length) throw new Error('empty');
+    const headers = Object.keys(rows[0]);
+    state.reportHeaders = headers;
+    state.reportRows = rows;
+    state.reportFileName = file.name;
+    state.mapping = {
+      article: guessColumn(headers, ['артикул поставщика', 'артикул', 'sku', 'article']),
+      quantity: guessColumn(headers, ['кол-во', 'количество', 'qty']),
+      salePrice: guessColumn(headers, ['цена розничная', 'розничная цена', 'цена продажи']),
+      toTransfer: guessColumn(headers, ['к перечислению продавцу', 'к перечислен', 'перечислен', 'выплат']),
+      logistics: guessColumn(headers, ['услуги по доставке', 'логист', 'достав']),
+      other: guessColumn(headers, ['общая сумма штрафов', 'штраф', 'удержан', 'прочие']),
+    };
+    state.viewingPeriodId = null;
+    renderAll();
+  } catch (err) {
+    errEl.innerHTML = icon('warn') + ' Не получилось прочитать файл. Проверь, что это .xlsx или .xls.';
+    errEl.style.display = 'inline-flex';
+  }
+}
+function saveCurrentPeriod(){
+  const rows = computeRows();
+  if (!rows.length) return;
+  const label = state.saveLabel.trim() || state.reportFileName || new Date().toLocaleDateString('ru-RU');
+  state.periods.push({
+    id: Date.now() + Math.random(), label, savedAt: new Date().toISOString(),
+    rows, totals: computeTotals(rows),
+  });
+  state.saveLabel = '';
+  savePeriods(); renderResultsAndHistory();
+}
+function deletePeriod(id){
+  state.periods = state.periods.filter(p => p.id !== id);
+  if (state.viewingPeriodId === id) state.viewingPeriodId = null;
+  savePeriods(); renderAll();
+}
+function exportBackup(){
+  const data = { purchaseDB: state.purchaseDB, periods: state.periods, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'wb_calculator_backup.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importBackupFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (Array.isArray(data.purchaseDB)) state.purchaseDB = data.purchaseDB;
+      if (Array.isArray(data.periods)) state.periods = data.periods;
+      savePurchaseDB(); savePeriods();
+      state.viewingPeriodId = null;
+      renderAll();
+    } catch (err) {
+      alert('Не получилось прочитать файл резервной копии — проверь, что это тот же .json, который скачивали отсюда.');
+    }
+  };
+  reader.readAsText(file);
+}
+function downloadResults(){
+  const rows = computeRows();
+  const data = rows.map(r => ({
+    'Артикул': r.article, 'Название': r.name, 'Кол-во': r.qty, 'Цена розничная': r.salePrice,
+    ['Комиссия (' + state.commissionRate + '%)']: r.commission,
+    'К перечислению': r.toTransfer, 'Логистика': r.logistics, 'Прочие удержания': r.other,
+    'Закупка (за ед.)': r.purchasePrice, 'Закупка (всего)': r.costTotal,
+    'Прибыль': r.profit, 'Маржа, %': Number(r.margin.toFixed(1)), 'Цена найдена': r.matched ? 'да' : 'нет',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Прибыль по артикулам');
+  XLSX.writeFile(wb, 'wb_profit_report.xlsx');
+}
+
+// ---------- rendering ----------
+function renderStamp(){
+  const period = activePeriod();
+  const rows = period ? period.rows : computeRows();
+  const totals = period ? period.totals : computeTotals(rows);
+  const el = document.getElementById('stamp');
+  if (!rows.length){ el.innerHTML = ''; return; }
+  const positive = totals.profit >= 0;
+  el.innerHTML = `
+    <div class="stamp" style="border-color:${positive?'var(--gold)':'var(--coral)'}; color:${positive?'var(--gold)':'var(--coral)'}">
+      <div class="label num">${positive ? 'прибыль' : 'убыток'}</div>
+      <div class="value num">${fmtSigned(totals.profit)} ₽</div>
+    </div>`;
+}
+
+function renderPurchase(){
+  const count = state.purchaseDB.length;
+  const controls = document.getElementById('priceControls');
+  controls.innerHTML = `
+    <div class="row">
+      <button class="btn btn-primary" id="btnImportPrices">${icon('upload')} Импортировать из Excel</button>
+      <button class="btn btn-ghost" id="btnAddPriceRow">${icon('plus')} Добавить строку</button>
+      ${count > 0 ? `<button class="btn btn-ghost" id="btnTogglePrices">${state.priceCollapsed ? 'Развернуть' : 'Свернуть'} (${count})</button>` : ''}
+      ${count > 0 ? `<button class="btn btn-ghost" id="btnClearPrices" style="color:var(--coral);border-color:var(--coral)">${icon('trash')} Удалить всё</button>` : ''}
+    </div>
+    ${(!state.priceCollapsed && count > 5) ? `<div class="search-box" style="max-width:280px;margin-bottom:16px">${icon('search')}<input type="text" id="priceSearchInput" placeholder="Поиск по артикулу или названию" value="${esc(state.priceSearch)}"></div>` : ''}
+  `;
+  document.getElementById('btnImportPrices').addEventListener('click', () => document.getElementById('priceFileInput').click());
+  document.getElementById('btnAddPriceRow').addEventListener('click', addPriceRow);
+  const toggleBtn = document.getElementById('btnTogglePrices');
+  if (toggleBtn) toggleBtn.addEventListener('click', () => { state.priceCollapsed = !state.priceCollapsed; renderPurchase(); });
+  const clearBtn = document.getElementById('btnClearPrices');
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (confirm('Удалить все закупочные цены (' + count + ' шт.)? Это нельзя отменить.')) {
+      state.purchaseDB = []; savePurchaseDB(); renderPurchase();
+    }
+  });
+  const searchInp = document.getElementById('priceSearchInput');
+  if (searchInp) searchInp.addEventListener('input', e => { state.priceSearch = e.target.value; renderPurchaseTable(); });
+
+  renderPurchaseTable();
+}
+
+function renderPurchaseTable(){
+  const wrap = document.getElementById('purchaseTableWrap');
+  if (!state.purchaseDB.length){
+    wrap.innerHTML = `<div class="empty">Пока пусто. Импортируй файл с закупочными ценами или добавь строки вручную.</div>`;
+    return;
+  }
+  if (state.priceCollapsed){ wrap.innerHTML = ''; return; }
+
+  const counts = new Map();
+  state.purchaseDB.forEach(r => {
+    const k = normalizeArticle(r.article);
+    if (k) counts.set(k, (counts.get(k) || 0) + 1);
+  });
+
+  let list = state.purchaseDB;
+  if (state.priceSearch.trim()){
+    const q = state.priceSearch.trim().toLowerCase();
+    list = list.filter(r => r.article.toLowerCase().includes(q) || (r.name || '').toLowerCase().includes(q));
+  }
+
+  const rowsHtml = list.map((row, idx) => {
+    const isDup = normalizeArticle(row.article) && counts.get(normalizeArticle(row.article)) > 1;
+    return `
+    <tr data-id="${row.id}" ${isDup ? 'style="background:var(--coral-bg)"' : ''}>
+      <td class="right num" style="color:var(--ink-dim)">${idx + 1}</td>
+      <td>
+        <input class="cell-input price-article" data-id="${row.id}" value="${esc(row.article)}" placeholder="напр. 178452301">
+        ${isDup ? `<div style="color:var(--coral);font-size:11px">дубликат артикула</div>` : ''}
+      </td>
+      <td><input class="cell-input price-name" data-id="${row.id}" value="${esc(row.name)}" placeholder="—"></td>
+      <td class="right"><input class="cell-input num price-cost" data-id="${row.id}" value="${esc(row.purchasePrice)}"></td>
+      <td class="right"><button class="icon-btn price-remove" data-id="${row.id}">${icon('trash')}</button></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="table-card">
+      <table>
+        <thead><tr><th class="right">№</th><th>Артикул</th><th>Название (необязательно)</th><th class="right">Закупочная цена, ₽</th><th class="right"></th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+  wrap.querySelectorAll('.price-article').forEach(inp => {
+    inp.addEventListener('focus', e => { priceArticleBeforeEdit.set(e.target.dataset.id, e.target.value); });
+    inp.addEventListener('input', e => updatePriceRow(Number(e.target.dataset.id), 'article', e.target.value));
+    inp.addEventListener('blur', e => {
+      const id = e.target.dataset.id;
+      const val = e.target.value.trim();
+      const key = normalizeArticle(val);
+      if (key){
+        const isDuplicate = state.purchaseDB.some(r => String(r.id) !== id && normalizeArticle(r.article) === key);
+        if (isDuplicate){
+          const original = priceArticleBeforeEdit.get(id) ?? '';
+          updatePriceRow(Number(id), 'article', original);
+          alert('Такой артикул уже есть в списке — оставил прежнее значение в этой строке. Отредактируй закупочную цену в существующей строке вместо добавления новой.');
+        }
+      }
+      priceArticleBeforeEdit.delete(id);
+      renderPurchaseTable();
+    });
+  });
+  wrap.querySelectorAll('.price-name').forEach(inp => inp.addEventListener('input', e => updatePriceRow(Number(e.target.dataset.id), 'name', e.target.value)));
+  wrap.querySelectorAll('.price-cost').forEach(inp => inp.addEventListener('input', e => updatePriceRow(Number(e.target.dataset.id), 'purchasePrice', e.target.value)));
+  wrap.querySelectorAll('.price-remove').forEach(btn => btn.addEventListener('click', e => removePriceRow(Number(e.currentTarget.dataset.id))));
+}
+
+function mappingFieldHtml(fieldKey, label, required){
+  const opts = state.reportHeaders.map(h => `<option value="${esc(h)}" ${state.mapping[fieldKey]===h?'selected':''}>${esc(h)}</option>`).join('');
+  return `
+    <label>
+      <span class="field-label">${label} ${required ? '<span class="req">*</span>' : ''}</span>
+      <select class="field map-select" data-field="${fieldKey}" style="width:100%">
+        <option value="">— нет —</option>${opts}
+      </select>
+    </label>`;
+}
+function renderMapping(){
+  const wrap = document.getElementById('mappingWrap');
+  document.getElementById('reportFileInfo').style.display = state.reportFileName ? 'inline-flex' : 'none';
+  document.getElementById('reportFileInfo').innerHTML = state.reportFileName ? (icon('file') + ' ' + esc(state.reportFileName) + ' · ' + state.reportRows.length + ' строк') : '';
+
+  if (!state.reportHeaders.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `
+    <div class="mapping-grid">
+      ${mappingFieldHtml('article', 'Артикул поставщика', true)}
+      ${mappingFieldHtml('quantity', 'Кол-во', false)}
+      ${mappingFieldHtml('salePrice', 'Цена розничная', true)}
+      ${mappingFieldHtml('toTransfer', 'К перечислению', true)}
+      ${mappingFieldHtml('logistics', 'Услуги доставки', false)}
+      ${mappingFieldHtml('other', 'Прочие удержания', false)}
+      <label>
+        <span class="field-label">Комиссия, % от цены розничной</span>
+        <input class="field num" id="commissionRateInput" style="width:100%" value="${esc(state.commissionRate)}">
+      </label>
+    </div>`;
+  wrap.querySelectorAll('.map-select').forEach(sel => sel.addEventListener('change', e => {
+    state.mapping[e.target.dataset.field] = e.target.value;
+    state.viewingPeriodId = null;
+    renderResultsAndHistory();
+  }));
+  document.getElementById('commissionRateInput').addEventListener('input', e => {
+    state.commissionRate = e.target.value;
+    renderResultsAndHistory();
+  });
+}
+
+function filteredSortedRows(rows){
+  let list = rows;
+  if (state.search.trim()){
+    const q = state.search.trim().toLowerCase();
+    list = list.filter(r => r.article.toLowerCase().includes(q) || (r.name||'').toLowerCase().includes(q));
+  }
+  return [...list].sort((a,b) => state.sortDir === 'asc' ? a.profit - b.profit : b.profit - a.profit);
+}
+
+function renderResults(){
+  const period = activePeriod();
+  const bannerEl = document.getElementById('viewingBanner');
+  const subEl = document.getElementById('resultsSub');
+  const wrap = document.getElementById('resultsWrap');
+
+  if (period){
+    subEl.textContent = `Просмотр сохранённого периода: «${period.label}».`;
+    bannerEl.innerHTML = `
+      <div class="banner">
+        <span>Это архивные данные периода «${esc(period.label)}», не текущий отчёт.</span>
+        <button class="link-btn" id="btnBackToLive">Вернуться к текущему отчёту</button>
+      </div>`;
+    document.getElementById('btnBackToLive').addEventListener('click', () => { state.viewingPeriodId = null; renderAll(); });
+  } else {
+    subEl.textContent = 'Убыточные позиции — сверху. Красным то, что не проходит; жёлтым — что зарабатывает.';
+    bannerEl.innerHTML = '';
+  }
+
+  const rows = period ? period.rows : computeRows();
+  const totals = period ? period.totals : computeTotals(rows);
+
+  if (!period && !mappingReady()){
+    wrap.innerHTML = `<div class="empty">Загрузи отчёт и укажи, какие колонки за что отвечают — таблица появится тут.</div>`;
+    return;
+  }
+
+  const list = filteredSortedRows(rows);
+  const rowsHtml = list.map(r => `
+    <tr class="${!r.matched ? '' : (r.profit < 0 ? 'coral-row' : 'gold-row')}">
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span>${esc(r.article) || '—'}</span>
+          ${!r.matched ? `<span title="Нет закупочной цены для этого артикула" style="color:var(--coral)">${icon('warn')}</span>` : ''}
+        </div>
+        ${r.name ? `<div style="color:var(--ink-dim);font-size:12px">${esc(r.name)}</div>` : ''}
+      </td>
+      <td class="right num">${fmt(r.salePrice)} ₽</td>
+      <td class="right num">${fmt(r.toTransfer)} ₽</td>
+      <td class="right num">${fmt(r.commission)} ₽</td>
+      <td class="right num">${fmt(r.logistics)} ₽</td>
+      <td class="right num">${fmt(r.costTotal)} ₽</td>
+      <td class="right num" style="color:${r.profit<0?'var(--coral)':'var(--gold)'};font-weight:600">${fmtSigned(r.profit)} ₽</td>
+      <td class="right num">${r.margin.toFixed(1)}%</td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <div class="row" style="justify-content:space-between">
+      <div class="search-box">${icon('search')}<input type="text" id="searchInput" placeholder="Поиск по артикулу или названию" value="${esc(state.search)}"></div>
+      <div class="row" style="margin:0">
+        ${totals.unmatched > 0 ? `<span class="warn">${icon('warn')} ${totals.unmatched} без закупочной цены</span>` : ''}
+        ${!period ? `<button class="btn btn-gold" id="btnDownload">${icon('download')} Скачать .xlsx</button>` : ''}
+      </div>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Артикул</th><th class="right">Цена розничная</th><th class="right">К перечислению</th>
+            <th class="right">Комиссия (${esc(state.commissionRate)}%)</th><th class="right">Логистика</th><th class="right">Закупка</th>
+            <th class="right"><button class="link-btn" id="sortToggle" style="display:inline-flex;align-items:center;gap:4px;color:var(--ink-dim)">Прибыль ${icon('sort')}</button></th>
+            <th class="right">Маржа</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot>
+          <tr style="border-top:2px solid var(--rule);background:var(--surface2)">
+            <td style="font-weight:600">Итого</td><td></td>
+            <td class="right num">${fmt(totals.toTransfer)} ₽</td>
+            <td class="right num">${fmt(totals.commission)} ₽</td>
+            <td class="right num">${fmt(totals.logistics)} ₽</td>
+            <td class="right num">${fmt(totals.cost)} ₽</td>
+            <td class="right num" style="color:${totals.profit<0?'var(--coral)':'var(--gold)'};font-weight:700">${fmtSigned(totals.profit)} ₽</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+
+  document.getElementById('searchInput').addEventListener('input', e => { state.search = e.target.value; renderResults(); });
+  document.getElementById('sortToggle').addEventListener('click', () => { state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; renderResults(); });
+  const dl = document.getElementById('btnDownload');
+  if (dl) dl.addEventListener('click', downloadResults);
+}
+
+function renderHistory(){
+  const saveRow = document.getElementById('saveRow');
+  const liveRows = computeRows();
+  saveRow.style.display = (mappingReady() && liveRows.length > 0) ? 'flex' : 'none';
+
+  const periodsWrap = document.getElementById('periodsWrap');
+  if (!state.periods.length){
+    periodsWrap.innerHTML = `<div class="empty">Пока не сохранено ни одного периода. Обработай отчёт выше и сохрани его — так появится история.</div>`;
+  } else {
+    const sorted = [...state.periods].sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
+    const rowsHtml = sorted.map(p => `
+      <tr style="${state.viewingPeriodId===p.id?'background:var(--surface2)':''}">
+        <td>${esc(p.label)}</td>
+        <td class="right num">${new Date(p.savedAt).toLocaleString('ru-RU')}</td>
+        <td class="right num" style="color:${p.totals.profit<0?'var(--coral)':'var(--gold)'};font-weight:600">${fmtSigned(p.totals.profit)} ₽</td>
+        <td class="right">
+          <div style="display:flex;align-items:center;gap:12px;justify-content:flex-end">
+            <button class="link-btn period-open" data-id="${p.id}">${state.viewingPeriodId===p.id?'Скрыть':'Открыть'}</button>
+            <button class="icon-btn period-delete" data-id="${p.id}">${icon('trash')}</button>
+          </div>
+        </td>
+      </tr>`).join('');
+    periodsWrap.innerHTML = `
+      <div class="table-card" style="margin-bottom:24px">
+        <table>
+          <thead><tr><th>Период</th><th class="right">Сохранён</th><th class="right">Итого прибыль</th><th class="right"></th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+    periodsWrap.querySelectorAll('.period-open').forEach(btn => btn.addEventListener('click', e => {
+      const id = Number(e.currentTarget.dataset.id);
+      state.viewingPeriodId = state.viewingPeriodId === id ? null : id;
+      renderAll();
+    }));
+    periodsWrap.querySelectorAll('.period-delete').forEach(btn => btn.addEventListener('click', e => deletePeriod(Number(e.currentTarget.dataset.id))));
+  }
+
+  const chronicWrap = document.getElementById('chronicWrap');
+  const chronic = chronicLosses();
+  if (!chronic.length){ chronicWrap.innerHTML = ''; return; }
+  const rowsHtml = chronic.map(c => `
+    <tr>
+      <td>${esc(c.article)}${c.name ? `<div style="color:var(--ink-dim);font-size:12px">${esc(c.name)}</div>` : ''}</td>
+      <td class="right num" style="color:var(--coral);font-weight:700">${c.streak}</td>
+      <td class="right num">${c.lossCount} из ${c.periodsCount}</td>
+      <td class="right num" style="color:var(--coral)">${fmtSigned(c.lastProfit)} ₽</td>
+    </tr>`).join('');
+  chronicWrap.innerHTML = `
+    <div class="dim" style="color:var(--coral);margin-bottom:8px">${icon('warn')} Артикулы в минусе два сохранённых периода подряд и больше:</div>
+    <div class="table-card coral-border">
+      <table>
+        <thead style="background:var(--coral-bg)"><tr><th>Артикул</th><th class="right">Минусов подряд</th><th class="right">Минусов всего</th><th class="right">Последняя прибыль</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderResultsAndHistory(){ renderStamp(); renderResults(); renderHistory(); }
+function renderAll(){ renderStamp(); renderPurchase(); renderMapping(); renderResults(); renderHistory(); }
+
+// ---------- wire up static controls ----------
+document.getElementById('priceFileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) handlePriceFile(f); e.target.value=''; });
+document.getElementById('btnLoadReport').addEventListener('click', () => document.getElementById('reportFileInput').click());
+document.getElementById('reportFileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) handleReportFile(f); e.target.value=''; });
+document.getElementById('btnSavePeriod').addEventListener('click', saveCurrentPeriod);
+document.getElementById('saveLabelInput').addEventListener('input', e => { state.saveLabel = e.target.value; });
+document.getElementById('btnExportBackup').addEventListener('click', exportBackup);
+document.getElementById('btnImportBackup').addEventListener('click', () => document.getElementById('backupFileInput').click());
+document.getElementById('backupFileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) importBackupFile(f); e.target.value=''; });
+
+// ---------- inject icons into static buttons (can't use template-literal syntax in plain HTML) ----------
+document.getElementById('btnLoadReport').innerHTML = icon('upload') + ' Загрузить отчёт';
+document.getElementById('btnSavePeriod').innerHTML = icon('plus') + ' Сохранить как период';
+document.getElementById('btnExportBackup').innerHTML = icon('download') + ' Скачать резервную копию';
+document.getElementById('btnImportBackup').innerHTML = icon('upload') + ' Загрузить резервную копию';
+
+// ---------- init ----------
+loadStorage();
+renderAll();
+</script>
+</body>
+</html>
